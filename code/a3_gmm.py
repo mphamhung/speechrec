@@ -32,14 +32,22 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     den = den**(1/2)
     den = np.pi**(d/2)*den
     
-    return num/den
+    return np.log(num/den)
 
     
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
-    print ( 'TODO' )
+
+    b = [np.exp(log_b_m_x(i,x,myTheta)) for i in range(len(x))]
+
+  
+    num = myTheta.omega[m]*b[m]
+    den = reduce((lambda x,y:x+y),[myTheta.omega[i]*b[i] for i in range(len(x))])
+
+    return np.log(num/den)
+
 
     
 def logLik( log_Bs, myTheta ):
@@ -54,12 +62,25 @@ def logLik( log_Bs, myTheta ):
 
         See equation 3 of the handout
     '''
+    p = 0
+    for t in range(np.shape(log_Bs)[1]):
+        p += sum([myTheta.omega[m]*np.exp(log_Bs[m][t])])
+    
+    return p
     print( 'TODO' )
 
     
 def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     ''' Train a model for the given speaker. Returns the theta (omega, mu, sigma)'''
-    myTheta = theta( speaker, M, X.shape[1] )
+    myTheta = theta( speaker, M, X.shape[1] )i
+
+    i = 0 
+    prev_L = np.NINF
+    improvement = np.inf
+
+    while i <= maxIter and improvement >= epsilon:
+        break
+
     print ('TODO')
     return myTheta
 
