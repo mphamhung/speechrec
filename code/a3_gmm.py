@@ -25,10 +25,10 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
    
     to_exp = [(x[i] - myTheta.mu[m][i])**2 for i in range(d)]
     to_exp = [to_exp[i]/myTheta.Sigma[n][i] for i in range(d)]
-    to_exp = (-0.5)*reduce((lambda x, y: x+y), to_exp)
+    to_exp = (-0.5)*np.sum(to_exp)
     num = np.exp(to_exp)
 
-    den = reduce((lambda x,y: x*y),myTheta[m])
+    den = np.sum(myTheta[m])
     den = den**(1/2)
     den = np.pi**(d/2)*den
     
@@ -44,7 +44,7 @@ def log_p_m_x( m, x, myTheta):
 
   
     num = myTheta.omega[m]*b[m]
-    den = reduce((lambda x,y:x+y),[myTheta.omega[i]*b[i] for i in range(len(x))])
+    den = np.sum([myTheta.omega[i]*b[i] for i in range(len(x))])
 
     return np.log(num/den)
 
@@ -53,7 +53,7 @@ def log_p_m_x( m, x, myTheta):
 def logLik( log_Bs, myTheta ):
     ''' Return the log likelihood of 'X' using model 'myTheta' and precomputed MxT matrix, 'log_Bs', of log_b_m_x
 
-        X can be training data, when used in train( ... ), and
+X can be training data, when used in train( ... ), and
         X can be testing data, when used in test( ... ).
 
         We don't actually pass X directly to the function because we instead pass:
@@ -64,7 +64,7 @@ def logLik( log_Bs, myTheta ):
     '''
     p = 0
     for t in range(np.shape(log_Bs)[1]):
-        p += sum([myTheta.omega[m]*np.exp(log_Bs[m][t])])
+        p += np.sum([myTheta.omega[m]*np.exp(log_Bs[m][t])])
     
     return p
     print( 'TODO' )
@@ -72,16 +72,45 @@ def logLik( log_Bs, myTheta ):
     
 def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     ''' Train a model for the given speaker. Returns the theta (omega, mu, sigma)'''
-    myTheta = theta( speaker, M, X.shape[1] )i
+    T = X.shape[0]
+    d = X.shape[1]
+
+    myTheta = theta( speaker, M, d )
 
     i = 0 
     prev_L = np.NINF
     improvement = np.inf
+    
+    logBs = np.zeros((M, T))  #eq1
+    logPs = np.zeros((M, T))  #eq2
 
     while i <= maxIter and improvement >= epsilon:
-        break
+        for m in range(M):
+            for t in range(T):
+                logBs[m][t] = log_b_m_x(m, X[t], myTheta)
+                logPs[m][t] = log_p_m_x(m, X[t], myTheta)
 
-    print ('TODO')
+        L = logLik(logBs, myTheta)
+        omegaHat = np.exp(logPs).sum(axis=1)/T
+
+        assert (omegaHat.shape == myTheta.omega.shape), "bad omega calculation"
+        
+        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1)
+        assert (muHat.shape == myTheta.mu.shape), "bad mu"
+        
+        sigmaHat = np.dot(np.exp(logPx), np.multiply(X,X))/np.exp(logPs).sum(axis=1) - np.multiply(muHat,muHat)
+        assert (sigmaHat.shape == myTheta.sigma.shape), "bad sigma"
+       
+        myTheta.mu = muHat
+        myTheta.omega = omegaHat
+        myTheta.sigma = sigmaHat
+        
+        improvement = L - prev_L
+        prev_L = L
+        i += 1
+
+      
+    #print ('TODO')
     return myTheta
 
 
