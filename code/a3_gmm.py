@@ -2,6 +2,7 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import os, fnmatch
 import random
+from scipy.special import logsumexp
 
 dataDir = '/u/cs401/A3/data/'
 
@@ -21,32 +22,42 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
         If you do this, you pass that precomputed component in preComputedForM
 
     '''
-    d = len(x)
    
-    to_exp = [(x[i] - myTheta.mu[m][i])**2 for i in range(d)]
-    to_exp = [to_exp[i]/myTheta.Sigma[n][i] for i in range(d)]
-    to_exp = (-0.5)*np.sum(to_exp)
-    num = np.exp(to_exp)
+    d = len(x)
 
-    den = np.sum(myTheta[m])
-    den = den**(1/2)
-    den = np.pi**(d/2)*den
-    
-    return np.log(num/den)
+    to_exp = np.square(np.subtract(x, myTheta.mu[m]))
 
+    to_exp = (-0.5)*np.sum(to_exp/myTheta.Sigma[m])
     
+    prod = 1
+    for sig in myTheta.Sigma[m]:
+        prod *= sig
+    
+    b = ((2*np.pi)**(d/2))*np.sqrt(prod)
+    
+    out = logsumexp(to_exp, b = b)
+    
+    return out    
+
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
+    M = myTheta.omega.shape[0]
 
-    b = [np.exp(log_b_m_x(i,x,myTheta)) for i in range(len(x))]
+    b = np.array([log_b_m_x(i, x, myTheta) for i in range(M)]).reshape((M,1)) 
 
-  
-    num = myTheta.omega[m]*b[m]
-    den = np.sum([myTheta.omega[i]*b[i] for i in range(len(x))])
+    num = np.multiply(myTheta.omega[m],b[m])
+    assert (np.shape(num) == np.shape([1])), "log p error in num"
+    num = num[0]
+    
+    den = np.sum(np.multiply(myTheta.omega, b))
+    
+    result = np.log(num/den)
 
-    return np.log(num/den)
+    assert (np.shape(result) == np.shape(1)), "log p error"
+
+    return result
 
 
     
@@ -74,8 +85,14 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     ''' Train a model for the given speaker. Returns the theta (omega, mu, sigma)'''
     T = X.shape[0]
     d = X.shape[1]
-
+    #initializing theta
     myTheta = theta( speaker, M, d )
+    np.random.seed(0)
+    myTheta.mu = np.random.permutation(X)[:][:M]
+    myTheta.Sigma = np.ones(np.shape(myTheta.Sigma))
+    myTheta.omega = np.random.rand(M,1)
+    myTheta.omega /= np.sum(myTheta.omega)
+    
 
     i = 0 
     prev_L = np.NINF
@@ -99,11 +116,11 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
         
         sigmaHat = np.dot(np.exp(logPx), np.multiply(X,X))/np.exp(logPs).sum(axis=1) - np.multiply(muHat,muHat)
-        assert (sigmaHat.shape == myTheta.sigma.shape), "bad sigma"
+        assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
        
         myTheta.mu = muHat
         myTheta.omega = omegaHat
-        myTheta.sigma = sigmaHat
+        myTheta.Sigma = sigmaHat
         
         improvement = L - prev_L
         prev_L = L
