@@ -114,7 +114,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     myTheta = theta( speaker, M, d )
     np.random.seed(0)
     myTheta.mu = np.random.permutation(X)[:][:M]
-    myTheta.Sigma = np.ones(myTheta.Sigma.shape)*M
+    myTheta.Sigma = np.ones(myTheta.Sigma.shape)
     myTheta.omega = np.random.rand(M,1)
     myTheta.omega /= np.sum(myTheta.omega) 
 
@@ -124,14 +124,13 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     
     logBs = np.ones((M, T))  #eq1
     logPs = np.ones((M, T))  #eq2
-
+    
+    f = open('train.txt', 'a+')
+    f.write(f"Speaker: {speaker}\n")
     while i <= maxIter and improvement >= epsilon:
         print(i)
         #break
         for m in range(M):  
-            #for t in range(T):
-             #   logBs[m][t] = log_b_m_x(m, X[t], myTheta)
-              #  logPs[m][t] = log_p_m_x(m, X[t], myTheta)
             logBs[m] = vec_logbm(m,X,myTheta)
             logPs[m] = vec_logpm(m,X,myTheta)
             assert(max(logBs[m]) <= 0), f"Invalid probability value for logb {max(logBs[m])}"
@@ -140,38 +139,31 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
             assert(np.nan not in np.exp(logPs[m]))
 
         assert (logBs.shape == (M,T)), "bad bs"
-
+        
+        print('done logbs')
         L = logLik(logBs, myTheta)
-        print(L) 
+        print(L)
+        f.write(f"Iter: {i}, LogLik: {L}\n")
         omegaHat = np.exp(logsumexp(logPs, axis=1))/T
-     
+        print('done omegahat')
         assert(not np.isnan(np.sum(omegaHat))), "nan in omegaHat"
         
         omegaHat = omegaHat.reshape((M,1))
         assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
-        
-        muHat = np.zeros(myTheta.mu.shape)
+  
+        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
+        muHat = muHat.reshape((M,d))      
 
-        for m in range(M):
-            muHat[m] = np.zeros((1,d))
-            for t in range(T):
-                muHat[m] += np.exp(logPs[m][t])*X[t]
-        muHat = np.divide(muHat, np.exp(logPs).sum(axis=1).reshape(M,1))
-       
-        muHat = muHat.reshape((M,d))
+        print('done muhat')
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
 
-        sigmaHat = np.zeros(myTheta.Sigma.shape)      
-        for m in range(M):
-            sigmaHat[m] = np.zeros((1,d))
-            for t in range(T):
-                sigmaHat[m] += np.exp(logPs[m][t])*np.square(X[t])
-        
-            sigmaHat[m] = np.divide(sigmaHat[m], np.exp(logPs[m]).sum()) - np.square(muHat[m])
+        sigmaHat = np.dot(np.exp(logPs), np.multiply(X,X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.multiply(muHat,muHat)
+        sigmaHat = sigmaHat.reshape((M,d))
+   
 
         sigmaHat = sigmaHat.reshape((M,d))
         assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
-        
+        print('done sigmahat')
         myTheta.mu = muHat
         myTheta.omega = omegaHat
         myTheta.Sigma = sigmaHat
@@ -198,11 +190,12 @@ def test( mfcc, correctID, models, k=5 ):
         e.g.,
                S-5A -9.21034037197
         the format of the log likelihood (number of decimal places, or exponent) does not matter
-    '''
+    ''' 
+    
     bestModel = -1
     d = np.shape(mfcc)[1]
     T = np.shape(mfcc)[0]
-    
+    f = open("gmmLiks.txt", "a")
     logBs = np.zeros((M,T))
     logPs = np.zeros((M,T))
    
@@ -215,14 +208,16 @@ def test( mfcc, correctID, models, k=5 ):
 
     sortedInds = reversed(np.argsort(Ls))
     sortedInds = [j for j in sortedInds]
+
+    bestModel = sortedInds[0]
     if k>0:
-        print("Actual ID: ", correctID)
+        f.write(f"Actual ID: {correctID}\n")
         for i in range(k):
             ind = sortedInds[i]
-            print(ind, " ", Ls[ind])
+            f.write(f"{ind} {Ls[ind]}\n")
     
             
-            
+    f.close()
     return 1 if (bestModel == correctID) else 0
 
 
