@@ -73,12 +73,13 @@ X can be training data, when used in train( ... ), and
 
         See equation 3 of the handout
     '''
-    p = 0
-    for t in range(np.shape(log_Bs)[1]):
-        p += np.sum([myTheta.omega[m]*np.exp(log_Bs[m][t])])
-    
-    return p
-    print( 'TODO' )
+    logP = 0
+   
+   # for t in range(log_Bs.shape[1]):
+    #    logP +=logsumexp(log_Bs.T[t],b = myTheta.omega)
+    logP = np.sum([logsumexp(log_Bs.T[t],b=myTheta.omega) for t in range(log_Bs.shape[1])])
+   
+    return logP
 
     
 def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
@@ -89,7 +90,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     myTheta = theta( speaker, M, d )
     np.random.seed(0)
     myTheta.mu = np.random.permutation(X)[:][:M]
-    myTheta.Sigma = np.ones(np.shape(myTheta.Sigma))
+    myTheta.Sigma = np.ones(np.shape(myTheta.Sigma))/M
     myTheta.omega = np.random.rand(M,1)
     myTheta.omega /= np.sum(myTheta.omega)
     
@@ -98,24 +99,31 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     prev_L = np.NINF
     improvement = np.inf
     
-    logBs = np.zeros((M, T))  #eq1
-    logPs = np.zeros((M, T))  #eq2
+    logBs = np.ones((M, T))  #eq1
+    logPs = np.ones((M, T))  #eq2
 
     while i <= maxIter and improvement >= epsilon:
+        print(i)
         for m in range(M):
+            print("m =",m)
             for t in range(T):
+         
                 logBs[m][t] = log_b_m_x(m, X[t], myTheta)
                 logPs[m][t] = log_p_m_x(m, X[t], myTheta)
 
         L = logLik(logBs, myTheta)
         omegaHat = np.exp(logPs).sum(axis=1)/T
-
-        assert (omegaHat.shape == myTheta.omega.shape), "bad omega calculation"
+        omegaHat = omegaHat.reshape((M,1))
+        assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
         
-        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1)
+        k = np.dot(np.exp(logPs),X)
+        k /= np.exp(logPs).sum(axis=1).reshape((M,1))
+        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
+        muHat = muHat.reshape((M,d))
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
         
-        sigmaHat = np.dot(np.exp(logPx), np.multiply(X,X))/np.exp(logPs).sum(axis=1) - np.multiply(muHat,muHat)
+        sigmaHat = np.dot(np.exp(logPs), np.multiply(X,X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.multiply(muHat,muHat)
+        sigmaHat = sigmaHat.reshape((M,d))
         assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
        
         myTheta.mu = muHat
