@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import re
 
 dataDir = '/u/cs401/A3/data/'
 
@@ -28,7 +29,101 @@ def Levenshtein(r, h):
     >>> wer("".split(), "who is there".split())                                 
     Inf 0 3 0                                                                           
     """
+    n = len(r)
+    m = len(h)
+    R = np.zeros((n+1,m+1))
+    B = np.zeros((n+1,m+1))
+ 
+   
+    for i in range(1):
+        for j in range(m+1):
+            R[i][j] = max(i, j)
+            if j != 0:
+                B[i][j] = 2
+    for i in range(n+1):
+        for j in range(1):
+            R[i][j] = max(i, j)
+            if i != 0:
+                B[i][j] = 1
+
+    for i in range(1,n+1):
+        for j in range(1,m+1):
+            de = R[i-1][j]+1 
+            sub = R[i-1][j-1] + (not r[i-1]==h[j-1])
+            ins = R[i][j-1]+1
+            R[i][j] = min(de,sub,ins)
+            if R[i][j] == de:
+                B[i][j] = 1
+            elif R[i][j] == ins:
+                B[i][j] = 2
+            elif R[i][j] == sub and r[i-1] == h[j-1]:
+                B[i][j] = 4
+            else:
+                B[i][j] = 3
+            
+    num_subs = 0
+    num_dels = 0
+    num_ins = 0
+    i = n
+    j = m
+    while B[i][j] != 0:
+        if B[i][j] == 1:
+            num_dels += 1
+            i-=1
+
+        elif B[i][j] == 2:
+            num_ins +=1
+            j-=1
+
+        elif B[i][j] == 3:
+            num_subs += 1
+            i -=1
+            j -=1
+
+        elif B[i][j] == 4:
+            i -=1
+            j -=1
+
+        else:
+            print("Something bad happened")
+
+  
+    WER = R[n][m]/n
+   
+
+    return WER, num_subs, num_ins, num_dels
 
 
 if __name__ == "__main__":
-    print( 'TODO' ) 
+    assert (Levenshtein("who is there".split(), "".split()) == (1.0,0,0,3)), Levenshtein("who is there".split(), "".split())
+    assert (Levenshtein("".split(), "who is there".split()) == (np.inf, 0, 3,0)), Levenshtein("".split(), "who is there".split())
+    
+    puncs = r'([!"#$%&\\()*+,-/:;<=>?@^_`{|}~])'
+    fh = open('lev.txt', 'w+')
+    for root,dirs,files in os.walk(dataDir):
+        for speaker in dirs:
+            with open(f"{root}{speaker}/transcripts.txt", 'r') as f:
+                ref_lines = f.readlines()
+
+            with open(f"{root}{speaker}/transcripts.Google.txt", 'r') as f:
+                goog_lines = f.readlines()
+
+            with open(f"{root}{speaker}/transcripts.Kaldi.txt", 'r') as f:
+                kald_lines = f.readlines()        
+
+            for i in range(len(ref_lines)):
+                ref = re.sub(puncs, '', ref_lines[i]).lower().split()[2:]
+                goog = re.sub(puncs, '', goog_lines[i]).lower().split()[2:]
+                kald = re.sub(puncs, '', kald_lines[i]).lower().split()[2:]
+
+
+                g_score = Levenshtein(ref, goog)
+                k_score = Levenshtein(ref, kald) 
+                
+                g_print = f"{speaker} Google {i} {g_score[0]} S: {g_score[1]}, I: {g_score[2]}, D: {g_score[3]}"
+                k_print = f"{speaker} Kaldi {i} {k_score[0]} S: {k_score[1]}, I: {k_score[2]}, D: {k_score[3]}"
+                fh.write(g_print)
+                fh.write(k_print)
+                print(g_print)
+                print(k_print)
+
