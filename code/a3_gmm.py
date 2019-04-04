@@ -22,42 +22,26 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
         If you do this, you pass that precomputed component in preComputedForM
 
     '''
+   
+    d = len(x)
+    result = -np.divide(np.square(x-myTheta.mu),2*myTheta.Sigma[m]).sum() - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
     
-
-    d = np.shape(x)[1]
-
-    to_exp = np.square(np.subtract(x, myTheta.mu[m]))
-
-    to_exp = (-0.5)*np.sum(to_exp/myTheta.Sigma[m])
-    
-    prod = 1
-    for sig in myTheta.Sigma[m]:
-        prod *= sig
-    
-    b = 1/((2*np.pi)**(d/2))*np.sqrt(prod)
-    
-    out = np.exp(to_exp)*b
-    
-    return out    
+    return result  
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
+
+
     M = myTheta.omega.shape[0]
-
-    b = np.array([log_b_m_x(i, x, myTheta) for i in range(M)]).reshape((M,1)) 
-
-    num = np.multiply(myTheta.omega[m],b[m])
-    assert (np.shape(num) == np.shape([1])), "log p error in num"
-    num = num[0]
+    logbm = log_b_m_x(m,x,myTheta)
     
-    den = np.sum(np.multiply(myTheta.omega, b))
+    result = np.log(myTheta.omega[m]) + logbm
     
-    result = np.log(num/den)
+    result -= logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)
 
-    assert (np.shape(result) == np.shape(1)), "log p error"
-
+   
     return result
 
 
@@ -74,12 +58,8 @@ X can be training data, when used in train( ... ), and
 
         See equation 3 of the handout
     '''
-    logP = 0
    
-   # for t in range(log_Bs.shape[1]):
-    #    logP +=logsumexp(log_Bs.T[t],b = myTheta.omega)
-    logP = np.sum([logsumexp(log_Bs.T[t],b=myTheta.omega) for t in range(log_Bs.shape[1])])
-   
+    logP = np.sum(logsumexp(log_Bs, axis = 0, b=myTheta.omega))
     return logP
 
     
@@ -91,10 +71,9 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     myTheta = theta( speaker, M, d )
     np.random.seed(0)
     myTheta.mu = np.random.permutation(X)[:][:M]
-    myTheta.Sigma = np.ones(np.shape(myTheta.Sigma))/M
+    myTheta.Sigma = np.ones(myTheta.Sigma.shape)*M
     myTheta.omega = np.random.rand(M,1)
-    myTheta.omega /= np.sum(myTheta.omega)
-    
+    myTheta.omega /= np.sum(myTheta.omega) 
 
     i = 0 
     prev_L = np.NINF
@@ -105,30 +84,59 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
 
     while i <= maxIter and improvement >= epsilon:
         print(i)
-        for m in range(M):
-            print("m =",m)
-     
-            logBs[m] = log_b_m_x(m, X, myTheta)
-            logPs[m] = log_p_m_x(m, X, myTheta)
+        #break
+        for m in range(M):  
+            for t in range(T):
+                logBs[m][t] = log_b_m_x(m, X[t], myTheta)
+          
+                logPs[m][t] = log_p_m_x(m, X[t], myTheta)
+            assert(max(logBs[m]) < 0), "Invalid probability value for logb"
+            assert(max(logPs[m]) < 0), "Invalid probability value for logp"
+            assert(np.nan not in np.exp(logBs[m]))
+            assert(np.nan not in np.exp(logPs[m]))
+
+        assert (logBs.shape == (M,T)), "bad bs"
 
         L = logLik(logBs, myTheta)
-        omegaHat = np.exp(logPs).sum(axis=1)/T
+        print(L) 
+        omegaHat = np.exp(logsumexp(logPs, axis=1))/T
+     
+        assert(not np.isnan(np.sum(omegaHat))), "nan in omegaHat"
+        
         omegaHat = omegaHat.reshape((M,1))
         assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
         
-        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
+        muHat = np.zeros(myTheta.mu.shape)
+
+        for m in range(M):
+            muHat[m] = np.zeros((1,d))
+            for t in range(T):
+                muHat[m] += np.exp(logPs[m][t])*X[t]
+        muHat = np.divide(muHat, np.exp(logPs).sum(axis=1).reshape(M,1))
+       
         muHat = muHat.reshape((M,d))
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
+
+        sigmaHat = np.zeros(myTheta.Sigma.shape)      
+        for m in range(M):
+            sigmaHat[m] = np.zeros((1,d))
+            for t in range(T):
+                sigmaHat[m] += np.exp(logPs[m][t])*np.square(X[t])
         
-        sigmaHat = np.dot(np.exp(logPs), np.multiply(X,X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.multiply(muHat,muHat)
+            sigmaHat[m] = np.divide(sigmaHat[m], np.exp(logPs[m]).sum()) - np.square(muHat[m])
+
         sigmaHat = sigmaHat.reshape((M,d))
         assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
-       
+        
         myTheta.mu = muHat
         myTheta.omega = omegaHat
         myTheta.Sigma = sigmaHat
         
+        print(muHat)
+        print(omegaHat)
+        print(sigmaHat) 
         improvement = L - prev_L
+        
         prev_L = L
         i += 1
 
@@ -161,12 +169,11 @@ def test( mfcc, correctID, models, k=5 ):
     for theta in models:
         for m in range(M):
             logBs[m] = log_b_m_x(m, X, theta)
-            logPs[m] = log_p_m_x(m, X, theta)
         L = logLik(logBs, theta)
         Ls.append(L)
 
     sortedInds = reversed(np.argsort(Ls))
-
+    sortedInds = [j for j in sortedInds]
     if k>0:
         print("Actual ID: ", correctID)
         for i in range(k):
