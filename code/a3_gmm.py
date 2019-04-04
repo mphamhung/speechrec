@@ -40,15 +40,18 @@ def vec_logpm(m,X,myTheta):
     """
 
     M = myTheta.omega.shape[0]
-    logbs = [vec_logbm(i,X,myTheta) for i in range(M)] #m x T
+    T = X.shape[0]
+    logBs = np.zeros((M,T))
 
-    den = logsumexp(logbs, axis=0, b=myTheta.omega)
-    print(den.shape) 
-    result = logbs[m] + np.log(myTheta.omega[m])
-    
-    result -= np.sum(den, axis=0)
-    print (result)
+    for i in range(M):
+        logBs[i] = vec_logbm(i,X,myTheta) #m x T
+     
+       
+    denom = logsumexp(logBs, axis=0, b= myTheta.omega)
+    result = (logBs[m] + np.log(myTheta.omega[m])) - denom
+    result = result.reshape(1,X.shape[0])
     assert(result.shape == (1,X.shape[0])), f"result has shape {result.shape}"
+    assert(np.max(result) <= 0)
     return result
 
     
@@ -131,8 +134,8 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
               #  logPs[m][t] = log_p_m_x(m, X[t], myTheta)
             logBs[m] = vec_logbm(m,X,myTheta)
             logPs[m] = vec_logpm(m,X,myTheta)
-            assert(max(logBs[m]) < 0), f"Invalid probability value for logb {max(logBs[m])}"
-            assert(max(logPs[m]) < 0), "Invalid probability value for logp"
+            assert(max(logBs[m]) <= 0), f"Invalid probability value for logb {max(logBs[m])}"
+            assert(max(logPs[m]) <= 0), "Invalid probability value for logp"
             assert(np.nan not in np.exp(logBs[m]))
             assert(np.nan not in np.exp(logPs[m]))
 
