@@ -13,6 +13,46 @@ class theta:
         self.mu = np.zeros((M,d))
         self.Sigma = np.zeros((M,d))
 
+def vec_logbm(m,X,myTheta):
+    """
+    input:
+        m -> Scalar
+        X -> Txd matrix
+
+    output:
+        result -> 1xT matrix
+    """
+    d = X.shape[1]
+    result = -np.divide(np.square(X-myTheta.mu[m]),2*myTheta.Sigma[m]).sum(axis = 1) - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
+    result = result.reshape(1,X.shape[0])
+    
+#    result = -np.divide(np.square(X-myTheta.mu[m]),2*myTheta.Sigma[m]).sum(axis = 1) 
+ #   result -= (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
+  #  result = result.reshape(1,X.shape[0]) 
+    assert(result.shape == (1,X.shape[0])), f"result has shape {result.shape}"
+   
+    return result
+
+def vec_logpm(m,X,myTheta):
+    """
+    
+    result = 1 by T matrix
+    """
+
+    M = myTheta.omega.shape[0]
+    logbs = [vec_logbm(i,X,myTheta) for i in range(M)] #m x T
+
+    den = logsumexp(logbs, axis=0, b=myTheta.omega)
+    print(den.shape) 
+    result = logbs[m] + np.log(myTheta.omega[m])
+    
+    result -= np.sum(den, axis=0)
+    print (result)
+    assert(result.shape == (1,X.shape[0])), f"result has shape {result.shape}"
+    return result
+
+    
+
 
 def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     ''' Returns the log probability of d-dimensional vector x using only component m of model myTheta
@@ -24,7 +64,7 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     '''
    
     d = len(x)
-    result = -np.divide(np.square(x-myTheta.mu),2*myTheta.Sigma[m]).sum() - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
+    result = -np.divide(np.square(x-myTheta.mu[m]),2*myTheta.Sigma[m]).sum() - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
     
     return result  
 
@@ -86,11 +126,12 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         print(i)
         #break
         for m in range(M):  
-            for t in range(T):
-                logBs[m][t] = log_b_m_x(m, X[t], myTheta)
-          
-                logPs[m][t] = log_p_m_x(m, X[t], myTheta)
-            assert(max(logBs[m]) < 0), "Invalid probability value for logb"
+            #for t in range(T):
+             #   logBs[m][t] = log_b_m_x(m, X[t], myTheta)
+              #  logPs[m][t] = log_p_m_x(m, X[t], myTheta)
+            logBs[m] = vec_logbm(m,X,myTheta)
+            logPs[m] = vec_logpm(m,X,myTheta)
+            assert(max(logBs[m]) < 0), f"Invalid probability value for logb {max(logBs[m])}"
             assert(max(logPs[m]) < 0), "Invalid probability value for logp"
             assert(np.nan not in np.exp(logBs[m]))
             assert(np.nan not in np.exp(logPs[m]))
@@ -131,10 +172,7 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         myTheta.mu = muHat
         myTheta.omega = omegaHat
         myTheta.Sigma = sigmaHat
-        
-        print(muHat)
-        print(omegaHat)
-        print(sigmaHat) 
+         
         improvement = L - prev_L
         
         prev_L = L
