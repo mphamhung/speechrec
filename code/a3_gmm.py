@@ -22,8 +22,9 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
         If you do this, you pass that precomputed component in preComputedForM
 
     '''
-   
-    d = len(x)
+    
+
+    d = np.shape(x)[1]
 
     to_exp = np.square(np.subtract(x, myTheta.mu[m]))
 
@@ -33,9 +34,9 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
     for sig in myTheta.Sigma[m]:
         prod *= sig
     
-    b = ((2*np.pi)**(d/2))*np.sqrt(prod)
+    b = 1/((2*np.pi)**(d/2))*np.sqrt(prod)
     
-    out = logsumexp(to_exp, b = b)
+    out = np.exp(to_exp)*b
     
     return out    
 
@@ -106,18 +107,15 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         print(i)
         for m in range(M):
             print("m =",m)
-            for t in range(T):
-         
-                logBs[m][t] = log_b_m_x(m, X[t], myTheta)
-                logPs[m][t] = log_p_m_x(m, X[t], myTheta)
+     
+            logBs[m] = log_b_m_x(m, X, myTheta)
+            logPs[m] = log_p_m_x(m, X, myTheta)
 
         L = logLik(logBs, myTheta)
         omegaHat = np.exp(logPs).sum(axis=1)/T
         omegaHat = omegaHat.reshape((M,1))
         assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
         
-        k = np.dot(np.exp(logPs),X)
-        k /= np.exp(logPs).sum(axis=1).reshape((M,1))
         muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
         muHat = muHat.reshape((M,d))
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
@@ -153,7 +151,30 @@ def test( mfcc, correctID, models, k=5 ):
         the format of the log likelihood (number of decimal places, or exponent) does not matter
     '''
     bestModel = -1
-    print ('TODO')
+    d = np.shape(mfcc)[1]
+    T = np.shape(mfcc)[0]
+    
+    logBs = np.zeros((M,T))
+    logPs = np.zeros((M,T))
+   
+    Ls = []
+    for theta in models:
+        for m in range(M):
+            logBs[m] = log_b_m_x(m, X, theta)
+            logPs[m] = log_p_m_x(m, X, theta)
+        L = logLik(logBs, theta)
+        Ls.append(L)
+
+    sortedInds = reversed(np.argsort(Ls))
+
+    if k>0:
+        print("Actual ID: ", correctID)
+        for i in range(k):
+            ind = sortedInds[i]
+            print(ind, " ", Ls[ind])
+    
+            
+            
     return 1 if (bestModel == correctID) else 0
 
 
