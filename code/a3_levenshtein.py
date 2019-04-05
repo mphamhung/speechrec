@@ -87,8 +87,8 @@ def Levenshtein(r, h):
         else:
             print("Something bad happened")
 
-  
-    WER = R[n][m]/n
+    
+    WER = R[n][m]/n if n != 0 else np.inf
    
 
     return WER, num_subs, num_ins, num_dels

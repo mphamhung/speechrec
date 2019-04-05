@@ -191,7 +191,7 @@ def test( mfcc, correctID, models, k=5 ):
 
     bestModel = sortedInds[0]
     if k>0:
-        f.write(f"Actual ID: {models[ind].name}\n")
+        f.write(f"Actual ID: {models[correctID].name}\n")
         for i in range(k):
             ind = sortedInds[i]
             f.write(f"{models[ind].name} {Ls[ind]}\n")
@@ -204,6 +204,90 @@ def test( mfcc, correctID, models, k=5 ):
 if __name__ == "__main__":
     np.random.seed(0)
     random.seed(0)
+    f = open('train.txt', 'w')
+    f.close()
+    f = open('train.txt', 'w')
+    f.close()
+
+    exp = open('experiment.txt', 'w')
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 16
+    epsilon = 0.0
+    maxIter = 20
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 12
+    epsilon = 0.0
+    maxIter = 20
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+
+####################################################
+
     trainThetas = []
     testMFCCs = []
     print('TODO: you will need to modify this main block for Sec 2.3')
@@ -237,3 +321,236 @@ if __name__ == "__main__":
         numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
     accuracy = 1.0*numCorrect/len(testMFCCs)
     print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 4
+    epsilon = 0.0
+    maxIter = 20
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 2
+    epsilon = 0.0
+    maxIter = 20
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 1
+    epsilon = 0.0
+    maxIter = 20
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 8
+    epsilon = 0.0
+    maxIter = 100
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 8
+    epsilon = 0.0
+    maxIter = 10
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
+
+####################################################
+
+    trainThetas = []
+    testMFCCs = []
+    print('TODO: you will need to modify this main block for Sec 2.3')
+    d = 13
+    k = 5  # number of top speakers to display, <= 0 if none
+    M = 8
+    epsilon = 0.0
+    maxIter = 2
+    # train a model for each speaker, and reserve data for testing
+    for subdir, dirs, files in os.walk(dataDir):
+        for speaker in dirs:
+            print( speaker )
+
+            files = fnmatch.filter(os.listdir( os.path.join( dataDir, speaker ) ), '*npy')
+            random.shuffle( files )
+            
+            testMFCC = np.load( os.path.join( dataDir, speaker, files.pop() ) )
+            testMFCCs.append( testMFCC )
+
+            X = np.empty((0,d))
+            for file in files:
+                myMFCC = np.load( os.path.join( dataDir, speaker, file ) )
+                X = np.append( X, myMFCC, axis=0)
+
+            trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
+
+    # evaluate 
+    print("evaluating....")
+    numCorrect = 0;
+    for i in range(0,len(testMFCCs)):
+        numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
+    accuracy = 1.0*numCorrect/len(testMFCCs)
+    print(accuracy)
+
+    exp.write(f"M = {M}, d = {d}, k = {k}, \nepsilon = {epsilon}, maxIter = {maxIter}, accuracy = {accuracy} \n+++++++++\n")
