@@ -1,0 +1,30 @@
+Experimenting with M, the number of components in the GMM, we notice that as we decrease the number of components, the accuracy also decreases. In our experiments we trained models with M = 16,8,2, with M = 2 resultin in an accuracy of 0.9375 and M = 16,8 having accuracy of 1.0. This makes sense as the MFCC is clearly multimodal and fitting the data to less modes would not be as representative. In addition, we also notice the significant increase in processing time. This makes sense since we're computing MxT matrices, so as we reduce M, we reduce the number computations we make in proporation to the number of frames (which is a high value)
+
+Experimenting with the number of maximum iterations, we again see that that as the number of iterations decreases, accuracy also decreases.
+In our expieriment we trained models with maxIter = 20,10,1,0. We noticed however, that the accuracy for iterations 10,1 and 0 were the same at 0.96875. This is most likely due our initialization. Note that maxIter =0 results in the loops running once, so in actuallity, the number of updats = maxIter+1. This explains the high accuracy of maxIter = 0. The decrease in accuracy makes sense since if we don't let the model converge to some theta, we result in a model that generally fits the data. Empirically, we see that the change in loglikely hoods after the 2 iteration is not significant, further explaining the closness in accuracies.
+
+Experimenting with the number of speakers results in no effect on the accuracy. Theoretically, the number of speakers shouldn't affect the accuracy as each model is trained specifically on one speaker and doesnt not take into consideration the other speakers. This is shown empirically with our experiments of 32, 16 and 8 speakers all resulting in an accuracy of 1.0
+
+In addition to the above, we experiemented with the amount of input data to train on with T = 100%, 50% and 1. T=50% resulted in 1.0 accuracy. T = 1 the resulting accuracy was 0.96875. This sounds reasonable when we consider that industry asr (i.e. google assistant) can recognize your voice after 1 or 2 samples.
+
+To improve the accuracy of the guassian mixtures, we could continue tuning our parameters. This could resolve any outliers in the data. Tuning our parameters, as above, has significant effect on accuracy and so tuning those based on our test and training set (as you would with any other ML model), would improve the accuracy of the GMM.
+
+Looking at the top 5 matches of a single test, for example:
+Actual ID: S-4D
+S-4D -529934.231246863
+S-32D -561211.047105442
+S-14B -562232.1872776469
+S-25A -566235.9023119533
+S-31C -583336.4517252201
+
+We notice that the most likely match is significantly more likely than the others. with this in mind, we can say that given a test utterance, if the highest likely hood is not some threshold greater than the mean of the of the other likelihoods, than the test doesnt belong to any of the trained speakers.
+
+Some alternative methods to do speaker identification is as follows:
+Nearest Neighbours (Sxd parameters to learn)
+Neural Network with one-hot encoding (uncorreleated features from mfcc should make this trivial)
+ 
+
+
+
+
+
