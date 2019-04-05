@@ -35,7 +35,9 @@ def vec_logbm(m,X,myTheta):
 
 def vec_logpm(m,X,myTheta):
     """
-    
+    input:
+        m -> scalar
+        X -> T x d 
     result = 1 by T matrix
     """
 
@@ -66,25 +68,26 @@ def log_b_m_x( m, x, myTheta, preComputedForM=[]):
 
     '''
    
-    d = len(x)
+    d = float(len(x))
     result = -np.divide(np.square(x-myTheta.mu[m]),2*myTheta.Sigma[m]).sum() - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
-    
+
     return result  
 
 def log_p_m_x( m, x, myTheta):
     ''' Returns the log probability of the m^{th} component given d-dimensional vector x, and model myTheta
         See equation 2 of handout
     '''
-
-
     M = myTheta.omega.shape[0]
     logbm = log_b_m_x(m,x,myTheta)
     
-    result = np.log(myTheta.omega[m]) + logbm
-    
-    result -= logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)
-
-   
+    result = np.log(myTheta.omega[m][0]) + logbm
+    bs = np.ones((M,1))
+    for i in range(M):
+        bs[i] = log_b_m_x(i,x,myTheta)
+    denom = logsumexp(bs, b=myTheta.omega)
+    #assert (denom == logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)), f"{denom} vs {logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)}"
+    #result -= logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)
+    result = result - denom
     return result
 
 
@@ -112,7 +115,6 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     d = X.shape[1]
     #initializing theta
     myTheta = theta( speaker, M, d )
-    np.random.seed(0)
     myTheta.mu = np.random.permutation(X)[:][:M]
     myTheta.Sigma = np.ones(myTheta.Sigma.shape)
     myTheta.omega = np.random.rand(M,1)
@@ -127,49 +129,82 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     
     f = open('train.txt', 'a+')
     f.write(f"Speaker: {speaker}\n")
-    while i <= maxIter and improvement >= epsilon:
+
+    do_vec = True
+    while i <= maxIter and improvement > epsilon:
         print(i)
-        #break
+        
+        vecBs = np.ones((M,T))
+        vecPs = np.ones((M,T))
         for m in range(M):  
+            #vecBs[m] = vec_logbm(m,X,myTheta)
+            #vecPs[m] = vec_logpm(m,X,myTheta)
+            #print(m)
+            #for t in range(T):
+             #   logBs[m][t] = log_b_m_x(m,X[t],myTheta)
+            #    logPs[m][t] = log_p_m_x(m,X[t],myTheta)	
+             #   assert(vecBs[m][t] == logBs[m][t])
+            #    assert(vecPs[m][t] == logPs[m][t]), f"{vecPs[m][t]} vs {logPs[m][t]}"
+            
+            #assert(max(logBs[m]) <= 0), f"Invalid probability value for logb {max(logBs[m])}"
+            #assert(max(logPs[m]) <= 0), "Invalid probability value for logp"
+            #assert(np.nan not in np.exp(logBs[m]))
+            #assert(np.nan not in np.exp(logPs[m]))
             logBs[m] = vec_logbm(m,X,myTheta)
             logPs[m] = vec_logpm(m,X,myTheta)
-            assert(max(logBs[m]) <= 0), f"Invalid probability value for logb {max(logBs[m])}"
-            assert(max(logPs[m]) <= 0), "Invalid probability value for logp"
-            assert(np.nan not in np.exp(logBs[m]))
-            assert(np.nan not in np.exp(logPs[m]))
-
         assert (logBs.shape == (M,T)), "bad bs"
         
-        print('done logbs')
+
         L = logLik(logBs, myTheta)
         print(L)
         f.write(f"Iter: {i}, LogLik: {L}\n")
         omegaHat = np.exp(logsumexp(logPs, axis=1))/T
-        print('done omegahat')
+        
         assert(not np.isnan(np.sum(omegaHat))), "nan in omegaHat"
         
         omegaHat = omegaHat.reshape((M,1))
         assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
-  
-        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
-        muHat = muHat.reshape((M,d))      
 
-        print('done muhat')
+        muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
+        muHat = muHat.reshape((M,d)) 
+        #testmuHat = np.zeros(myTheta.mu.shape)
+
+        #for m in range(M):
+        #    testmuHat[m] = np.zeros((1,d))
+        #    for t in range(T):
+        #        testmuHat[m] += np.exp(logPs[m][t])*X[t]
+            
+        #    assert(muHat[m].all() == testmuHat[m].all()), f"{muHat[m]} vs {testmuHat[m]}"
+        #testmuHat = np.divide(testmuHat, np.exp(logPs).sum(axis=1).reshape((M,1)))
+       
+        #testmuHat = testmuHat.reshape((M,d))   
+
+        #assert (testmuHat.all() == muHat.all())
         assert (muHat.shape == myTheta.mu.shape), "bad mu"
 
-        sigmaHat = np.dot(np.exp(logPs), np.multiply(X,X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.multiply(muHat,muHat)
+        sigmaHat = np.dot(np.exp(logPs), np.square(X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.square(muHat)
         sigmaHat = sigmaHat.reshape((M,d))
-   
+
+        #testsigmaHat = np.zeros(myTheta.Sigma.shape)      
+        #for m in range(M):
+        #    testsigmaHat[m] = np.zeros((1,d))
+        #    for t in range(T):
+        #        testsigmaHat[m] += np.exp(logPs[m][t])*np.square(X[t])
+        
+        #    testsigmaHat[m] = np.divide(testsigmaHat[m], np.exp(logPs[m]).sum()) - np.square(muHat[m])
+        #    assert (testsigmaHat[m].all() == sigmaHat[m].all()), f'{testsigmaHat[m]} vs {sigmaHat[m]}'
+        #testsigmaHat = testsigmaHat.reshape((M,d))   
 
         sigmaHat = sigmaHat.reshape((M,d))
+        #assert(testsigmaHat.all() == sigmaHat.all())
         assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
-        print('done sigmahat')
+
         myTheta.mu = muHat
         myTheta.omega = omegaHat
         myTheta.Sigma = sigmaHat
          
         improvement = L - prev_L
-        
+        #print(improvement) 
         prev_L = L
         i += 1
 
@@ -202,7 +237,7 @@ def test( mfcc, correctID, models, k=5 ):
     Ls = []
     for theta in models:
         for m in range(M):
-            logBs[m] = log_b_m_x(m, X, theta)
+            logBs[m] = vec_logbm(m,mfcc,theta)
         L = logLik(logBs, theta)
         Ls.append(L)
 
@@ -222,7 +257,8 @@ def test( mfcc, correctID, models, k=5 ):
 
 
 if __name__ == "__main__":
-
+    np.random.seed(0)
+    random.seed(0)
     trainThetas = []
     testMFCCs = []
     print('TODO: you will need to modify this main block for Sec 2.3')
@@ -250,8 +286,9 @@ if __name__ == "__main__":
             trainThetas.append( train(speaker, X, M, epsilon, maxIter) )
 
     # evaluate 
+    print("evaluating....")
     numCorrect = 0;
     for i in range(0,len(testMFCCs)):
         numCorrect += test( testMFCCs[i], i, trainThetas, k ) 
     accuracy = 1.0*numCorrect/len(testMFCCs)
-
+    print(accuracy)
