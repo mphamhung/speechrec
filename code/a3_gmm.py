@@ -26,11 +26,6 @@ def vec_logbm(m,X,myTheta):
     result = -np.divide(np.square(X-myTheta.mu[m]),2*myTheta.Sigma[m]).sum(axis = 1) - (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
     result = result.reshape(1,X.shape[0])
     
-#    result = -np.divide(np.square(X-myTheta.mu[m]),2*myTheta.Sigma[m]).sum(axis = 1) 
- #   result -= (d/2)*np.log(2*np.pi) - 0.5*np.log(myTheta.Sigma[m].prod())
-  #  result = result.reshape(1,X.shape[0]) 
-    assert(result.shape == (1,X.shape[0])), f"result has shape {result.shape}"
-   
     return result
 
 def vec_logpm(m,X,myTheta):
@@ -48,12 +43,10 @@ def vec_logpm(m,X,myTheta):
     for i in range(M):
         logBs[i] = vec_logbm(i,X,myTheta) #m x T
      
-       
     denom = logsumexp(logBs, axis=0, b= myTheta.omega)
     result = (logBs[m] + np.log(myTheta.omega[m])) - denom
     result = result.reshape(1,X.shape[0])
-    assert(result.shape == (1,X.shape[0])), f"result has shape {result.shape}"
-    assert(np.max(result) <= 0)
+
     return result
 
     
@@ -85,8 +78,7 @@ def log_p_m_x( m, x, myTheta):
     for i in range(M):
         bs[i] = log_b_m_x(i,x,myTheta)
     denom = logsumexp(bs, b=myTheta.omega)
-    #assert (denom == logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)), f"{denom} vs {logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)}"
-    #result -= logsumexp([log_b_m_x(i,x,myTheta) for i in range(M)], b = myTheta.omega)
+
     result = result - denom
     return result
 
@@ -137,66 +129,21 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         vecBs = np.ones((M,T))
         vecPs = np.ones((M,T))
         for m in range(M):  
-            #vecBs[m] = vec_logbm(m,X,myTheta)
-            #vecPs[m] = vec_logpm(m,X,myTheta)
-            #print(m)
-            #for t in range(T):
-             #   logBs[m][t] = log_b_m_x(m,X[t],myTheta)
-            #    logPs[m][t] = log_p_m_x(m,X[t],myTheta)	
-             #   assert(vecBs[m][t] == logBs[m][t])
-            #    assert(vecPs[m][t] == logPs[m][t]), f"{vecPs[m][t]} vs {logPs[m][t]}"
-            
-            #assert(max(logBs[m]) <= 0), f"Invalid probability value for logb {max(logBs[m])}"
-            #assert(max(logPs[m]) <= 0), "Invalid probability value for logp"
-            #assert(np.nan not in np.exp(logBs[m]))
-            #assert(np.nan not in np.exp(logPs[m]))
             logBs[m] = vec_logbm(m,X,myTheta)
             logPs[m] = vec_logpm(m,X,myTheta)
-        assert (logBs.shape == (M,T)), "bad bs"
         
-
         L = logLik(logBs, myTheta)
         print(L)
         f.write(f"Iter: {i}, LogLik: {L}\n")
         omegaHat = np.exp(logsumexp(logPs, axis=1))/T
-        
-        assert(not np.isnan(np.sum(omegaHat))), "nan in omegaHat"
-        
         omegaHat = omegaHat.reshape((M,1))
-        assert (omegaHat.shape == myTheta.omega.shape), f"bad omega calculation: shape w_hat: {omegaHat.shape}, shape omega: {myTheta.omega.shape}"
 
         muHat = np.dot(np.exp(logPs),X)/np.exp(logPs).sum(axis=1).reshape((M,1))
         muHat = muHat.reshape((M,d)) 
-        #testmuHat = np.zeros(myTheta.mu.shape)
-
-        #for m in range(M):
-        #    testmuHat[m] = np.zeros((1,d))
-        #    for t in range(T):
-        #        testmuHat[m] += np.exp(logPs[m][t])*X[t]
-            
-        #    assert(muHat[m].all() == testmuHat[m].all()), f"{muHat[m]} vs {testmuHat[m]}"
-        #testmuHat = np.divide(testmuHat, np.exp(logPs).sum(axis=1).reshape((M,1)))
-       
-        #testmuHat = testmuHat.reshape((M,d))   
-
-        #assert (testmuHat.all() == muHat.all())
-        assert (muHat.shape == myTheta.mu.shape), "bad mu"
 
         sigmaHat = np.dot(np.exp(logPs), np.square(X))/np.exp(logPs).sum(axis=1).reshape((M,1)) - np.square(muHat)
         sigmaHat = sigmaHat.reshape((M,d))
-
-        #testsigmaHat = np.zeros(myTheta.Sigma.shape)      
-        #for m in range(M):
-        #    testsigmaHat[m] = np.zeros((1,d))
-        #    for t in range(T):
-        #        testsigmaHat[m] += np.exp(logPs[m][t])*np.square(X[t])
-        
-        #    testsigmaHat[m] = np.divide(testsigmaHat[m], np.exp(logPs[m]).sum()) - np.square(muHat[m])
-        #    assert (testsigmaHat[m].all() == sigmaHat[m].all()), f'{testsigmaHat[m]} vs {sigmaHat[m]}'
-        #testsigmaHat = testsigmaHat.reshape((M,d))   
-
-        sigmaHat = sigmaHat.reshape((M,d))
-        #assert(testsigmaHat.all() == sigmaHat.all())
+ 
         assert (sigmaHat.shape == myTheta.Sigma.shape), "bad sigma"
 
         myTheta.mu = muHat
@@ -204,12 +151,9 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         myTheta.Sigma = sigmaHat
          
         improvement = L - prev_L
-        #print(improvement) 
         prev_L = L
         i += 1
 
-      
-    #print ('TODO')
     return myTheta
 
 
@@ -246,7 +190,7 @@ def test( mfcc, correctID, models, k=5 ):
 
     bestModel = sortedInds[0]
     if k>0:
-        f.write(f"Actual ID: {correctID}\n")
+        f.write(f"Actual ID: {models[ind].name}\n")
         for i in range(k):
             ind = sortedInds[i]
             f.write(f"{ind} {Ls[ind]}\n")

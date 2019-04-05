@@ -120,8 +120,8 @@ if __name__ == "__main__":
                 g_score = Levenshtein(ref, goog)
                 k_score = Levenshtein(ref, kald) 
                 
-                g_print = f"{speaker} Google {i} {g_score[0]} S: {g_score[1]}, I: {g_score[2]}, D: {g_score[3]}"
-                k_print = f"{speaker} Kaldi {i} {k_score[0]} S: {k_score[1]}, I: {k_score[2]}, D: {k_score[3]}"
+                g_print = f"{speaker} Google {i} {g_score[0]} S: {g_score[1]}, I: {g_score[2]}, D: {g_score[3]}\n"
+                k_print = f"{speaker} Kaldi {i} {k_score[0]} S: {k_score[1]}, I: {k_score[2]}, D: {k_score[3]}\n"
                 fh.write(g_print)
                 fh.write(k_print)
                 print(g_print)
