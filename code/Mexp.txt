@@ -1,0 +1,12 @@
+M = 16, d = 13, k = 5 
+numSpeakers =32 
+epsilon = 0.0, maxIter = 20, accuracy = 1.0 
++++++++++
+M = 8, d = 13, k = 5 
+numSpeakers =32 
+epsilon = 0.0, maxIter = 20, accuracy = 1.0 
++++++++++
+M = 2, d = 13, k = 5 
+numSpeakers =32 
+epsilon = 0.0, maxIter = 20, accuracy = 0.9375 
++++++++++

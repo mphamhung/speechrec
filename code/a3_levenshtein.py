@@ -100,6 +100,9 @@ if __name__ == "__main__":
     
     puncs = r'([!"#$%&\\()*+,-/:;<=>?@^_`{|}~])'
     fh = open('lev.txt', 'w+')
+     
+    mem_g = []
+    mem_k = []
     for root,dirs,files in os.walk(dataDir):
         for speaker in dirs:
             with open(f"{root}{speaker}/transcripts.txt", 'r') as f:
@@ -119,11 +122,18 @@ if __name__ == "__main__":
 
                 g_score = Levenshtein(ref, goog)
                 k_score = Levenshtein(ref, kald) 
-                
+                mem_g.append(g_score)
+                mem_k.append(k_score)
                 g_print = f"{speaker} Google {i} {g_score[0]} S: {g_score[1]}, I: {g_score[2]}, D: {g_score[3]}\n"
                 k_print = f"{speaker} Kaldi {i} {k_score[0]} S: {k_score[1]}, I: {k_score[2]}, D: {k_score[3]}\n"
                 fh.write(g_print)
                 fh.write(k_print)
                 print(g_print)
                 print(k_print)
+    means_g = np.mean(mem_g, axis =0)
+    means_k = np.mean(mem_k, axis =0)
+    sig_g = np.var(mem_g, axis =0)
+    sig_k = np.var(mem_k, axis =0)
 
+    anal = f"G:: Mean MER = {means_g[0]}, Var MER = {sig_g[0]}\nK:: Mean Mer = {means_k[0]}, Var MER = {sig_k[0]}"
+    fh.write(anal)
