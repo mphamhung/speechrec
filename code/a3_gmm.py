@@ -3,6 +3,7 @@ import numpy as np
 import os, fnmatch
 import random
 from scipy.special import logsumexp
+import pickle
 
 dataDir = '/u/cs401/A3/data/'
 
@@ -119,9 +120,14 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
     logBs = np.ones((M, T))  #eq1
     logPs = np.ones((M, T))  #eq2
     
-    f = open('train.txt', 'a+')
-    f.write(f"Speaker: {speaker}\n")
+    f = open(f'training.M.{M}.eps.{epsilon}.maxIter.{maxIter}.txt', 'a+')
 
+    if False:
+        jjj = open(f'model:{speaker}.{M}.{epsilon}.{maxIter}', 'rb')
+        return pickle.load(jjj)
+
+
+    f.write(f"Speaker: {speaker}\n")
     do_vec = True
     while i <= maxIter and improvement > epsilon:
         print(i)
@@ -154,6 +160,8 @@ def train( speaker, X, M=8, epsilon=0.0, maxIter=20 ):
         prev_L = L
         i += 1
 
+    to_pick = open(f'model:{speaker}.{M}.{epsilon}.{maxIter}', 'wb+') 
+    pickle.dump(myTheta, to_pick)
     return myTheta
 
 
