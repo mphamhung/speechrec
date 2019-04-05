@@ -174,6 +174,7 @@ def test( mfcc, correctID, models, k=5 ):
     bestModel = -1
     d = np.shape(mfcc)[1]
     T = np.shape(mfcc)[0]
+    M = np.shape(models[0].mu)[0]
     f = open("gmmLiks.txt", "a")
     logBs = np.zeros((M,T))
     logPs = np.zeros((M,T))
@@ -193,7 +194,7 @@ def test( mfcc, correctID, models, k=5 ):
         f.write(f"Actual ID: {models[ind].name}\n")
         for i in range(k):
             ind = sortedInds[i]
-            f.write(f"{ind} {Ls[ind]}\n")
+            f.write(f"{models[ind].name} {Ls[ind]}\n")
     
             
     f.close()
